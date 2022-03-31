@@ -70,12 +70,20 @@ public:
      */
     void restart()
     {
+
+        #if defined(MySensors_h) && defined(MY_DEBUG)
+        this->sendLog(String("Do restart").c_str());
+        #endif
+
         // Software
         if (this->isSoftware()) {
             /*
+            // Watchdog method: Don't work on Arduino clone
             wdt_enable(WDTO_15MS);
             while(1) {}
             */
+            delay(5);
+            // Restart program to beginning (and reset all timers)
             asm volatile ("  jmp 0");
         } 
         // Hardware
@@ -110,6 +118,29 @@ public:
     
 
 protected:
+
+    #if defined(MySensors_h)
+    /**
+     * Send log
+     *
+     * @param char * message Log message (max 25 bytes). To confirm: 10 char max
+     */
+    void sendLog(const char * message)
+    {
+        MyMessage msg;
+        msg.sender = getNodeId();
+        msg.destination = GATEWAY_ADDRESS;
+        msg.sensor = NODE_SENSOR_ID;
+        msg.type = I_LOG_MESSAGE;
+        mSetCommand(msg, C_INTERNAL);
+        mSetRequestEcho(msg, true);
+        mSetEcho(msg, false);
+        
+        msg.set(message);
+                
+        _sendRoute(msg);
+    }
+    #endif
 
     /*
      * Enable feature or not
